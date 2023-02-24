@@ -1,0 +1,104 @@
+SELECT l.NuLicencia,p.* FROM `personasjurídicas` p inner join lotjurídicas l on p.IdEntidad = l.IdEntidad WHERE `IDEstado` not in (2,4,8,10) GROUP by p.IdEntidad;
+
+#SELECT `IdEstab` as "id",`Licencia` as "lot_id",`Municipio` as "municipio_id",`ServAuxCon` as "serv_aux_con_id",`NombreEstab` as "nombre",`LugarDeUbicación` as "direccion",`Aseguramiento` as "aseguramiento" FROM `establecimientos`;
+
+#SELECT `idorga`,`idmunicipio`,`IdEntidad`,`CodReeup`,`NomEntidad`,`Dirección` as `Direccion`,`Actividad`,`Rama`,`SubRama`,`NoContribuyente`,1 as `tipoEmpresa` FROM `personasjurídicas` LEFT join organismos o on `personasjurídicas`.`IdOrga` = o.Cod;
+
+#SELECT (if(`IdOrga` in(SELECT `Cod` FROM `organismos`),`IdOrga`,999)) as `idorga` ,`idmunicipio`,concat(`IdEntidad`,"-23") as `IdEntidad`,`CodReeup`,`NomEntidad`,`Dirección` as `Direccion`,`Actividad`,`Rama`,`SubRama`,`NoContribuyente`,if(`IdEntidad` in (SELECT `IdEntidad` FROM `personasjurídicas` where `NomEntidad` like("%MIPYME%")),2,1) as `tipoEmpresa` FROM `personasjurídicas`;
+
+DELETE FROM `lotjurídicas` WHERE `NuLicencia` is NULL or `IdEntidad` is NULL or (`NuLicencia` not like("J%") and `NuLicencia` not like("j%") ) or (`IDEstado` in (2,4,8,10));
+
+UPDATE `lotjurídicas` SET `NuLicencia`=REPLACE(`NuLicencia`,"j","J")
+
+DELETE FROM `personasjurídicas` WHERE `NomEntidad` is NULL or (`IdEntidad` not in (SELECT `IdEntidad` from `lotjurídicas`)) 
+
+SELECT 1 as `idtramitador`, 1 as `idaprueba`,`IDExtensión` as `idextension`, `idrama`, `NuLicencia`, `FechaSolicitud`, 1 as `Presentada`, 1 as `Aprobada`,`FechaAprobación` as `FechaAprobacion`,`FechaEmisión` as `FechaEmision`, `FechaEntrega`,`Limitación` as `limitacion`, `TpoMedioAmparado`,`Duración` as `Duracion`,  `NúmFolio` as `NumFolio`, `FechaAprobInicial`, `TipoSolicitud`, `Dictamen`, `Duplicado`,`FechaEmisión` as `fimpresion`, concat(`IdEntidad`,"-23") as `IdEntidad`, `IDTipo`, `IDServicio`, `ServicioAmparado`, `IDEstado` FROM `lotjurídicas`;
+
+DELETE FROM `basificación` WHERE `IdLicencia` not in (SELECT `NuLicencia` FROM `lotjurídicas`);
+
+DELETE FROM `mediostransam` WHERE `IdLBasiAM` not in (SELECT `IdLBasiAM` FROM `basificación`);
+DELETE FROM `mediostransmar` WHERE `IdLBasiAM` not in (SELECT `IdLBasiAM` FROM `basificación`);
+DELETE FROM `mediostransfc` WHERE `IdLBasiAM` not in (SELECT `IdLBasiAM` FROM `basificación`);
+
+DELETE FROM `foliocomprobantes` where `Chapa` NOT in (SELECT `ChapaNo` FROM `mediostransam`);
+
+DELETE FROM `foliocomprobantes` WHERE CURRENT_DATE >  DATE_ADD(`FechaEmitido`,INTERVAL 3 YEAR);
+
+DELETE FROM `foliocomprobantes` WHERE `Chapa` IS NULL OR `Licencia` IS NULL OR `EstadoModeloLot` NOT IN(2,3,4)
+
+
+DELETE FROM `folioestablecimientos` where `Establecimiento` NOT in (SELECT `IdEstab` FROM `establecimientos`);
+
+DELETE FROM `folioestablecimientos` WHERE CURRENT_DATE >  DATE_ADD(`FechaEmitido`,INTERVAL 3 YEAR);
+
+DELETE FROM `folioestablecimientos` WHERE `Establecimiento` IS NULL OR `Licencia` IS NULL OR `EstadoModeloLot` NOT IN(2,3,4)
+
+SELECT 1 as `medio_id`,f.`Licencia` as `lot`, f.`Extensión` as `extension_id`, f.`EstadoModeloLot` as `estado_comp_id`, f.`Folio` as `folio`, f.`FechaEmitido` as `femitido`, f.`FechaImpresión` as `fimpreso`, f.`FechaEntrega` as `fentrega`, f.`SinCosto` as `sincostp`, f.`Duplicado` as `duplicado`, f.`Importe` as `importe`,vence_comp(f.`FechaEmitido`,f.`Duplicado`,m.AñosVigencia,m.MedidaDelTiempo) as `fvencimiento`,1 as `firma`,1 as `firmacargo` FROM `mediostransam` m left join foliocomprobantes f on m.NoComp = f.Folio  
+WHERE f.`Licencia` is not NULL 
+
+
+DROP FUNCTION IF EXISTS vence_comp
+DELIMITER //
+create function vence_comp(emitido date,duplicado boolean,vigencia int, medida varchar(20)) returns date 
+begin
+    declare vence date;  
+    
+    if(!duplicado) then
+    set vence = date_add(emitido, INTERVAL 3 YEAR);
+    ELSE
+    	if(medida="YYYY" or medida="yyyy") then 
+    		return date_add(emitido, INTERVAL vigencia YEAR);
+        ELSE
+        	RETURN date_add(emitido,INTERVAL vigencia DAY);
+        end if;
+    end if;
+return vence;
+end;;;;
+
+SELECT * FROM `mediostransam` WHERE `ChapaNo` not in (SELECT nombre from medios_trans);
+
+SELECT `id`, `tipomedio`, `umcap_id`, `estado_medio_id`, `rama`, `nombre`, `basificacion`, `year_fab`, `cap`, `aseguramiento`, `marca`, `modelo`, `ind_consumo`, `potencia`, `num_rev_tecnica`, `venc_rev_tecnica`, `pais_abanderamiento`, `id_tipo`, `servicio`, `servicios_especiales`, `cap_psentados`, `cap_pdepie`, `tipoCombustible`, `tipoPropiedad`, `basificacionObj` FROM `medios_trans` WHERE 1
+**************************************
+vista para exportar mediostransam`
+*************************************
+SELECT `IdTpoMedioAM` as `tipomedio`,`UMct` as `umcap_id`,1 as `estado_medio_id`,1 as `rama`,  `IdCamión` as `tipo_camion_id`, `ChapaNo` as `nombre`,concat(`IdLBasiAM`,"-14") as `basificacion`,`AñoDeFabricación` as `year_fab`,`CapaciTrans` as `cap`, `Aseguramiento` as `aseguramiento`,`Marca` as `marca`,`Modelo` as  `modelo`,`ICC` as `ind_consumo`,0 as `potencia`,`NumRevTec` as `num_rev_tecnica`,`VencimientoRT` as `venc_rev_tecnica`, "Cuba" as `pais_abanderamiento`,`IdTipo` as `id_tipo`,`IdServicio` as `servicio`,`ServiciosEspeciales` as `servicios_especiales`,0 as `cap_psentados`,0 as `cap_pdepie`,`Combustible` as `tipoCombustible`,1 as `tipoPropiedad`,concat(`IdLBasiAM`,"-14") as `basificacionObj` FROM `mediostransam` WHERE 1
+
+***********************************
+medios maritimos
+***********************************
+SELECT  `IdTpoEm` as `tipomedio`, `UMct` as `umcap_id`,1 as `estado_medio_id`, 2 as`rama`, NULL as`tipo_camion_id`,`NomONúm` as `nombre`, concat(`IdLBasiAM`,"-14") as `basificacion`, `AñoFab` as `year_fab`,`Capacidad` as `cap`,0 as `aseguramiento`,NULL as `marca`,NULL as `modelo`, NULL as `ind_consumo`,`Potencia` as `potencia`,NULL as `num_rev_tecnica`,NULL as `venc_rev_tecnica`, `PaísDeAbanderamiento` as `pais_abanderamiento`,1 as `id_tipo`,NULL as `servicio`, `ServiciosEspeciales` as `servicios_especiales`,0 as `cap_psentados`,0 as `cap_pdepie`, NULL as `tipoCombustible`, `TipoDePropiedad` as `tipoPropiedad`,concat(`IdLBasiAM`,"-14") `basificacionObj` FROM `mediostransmar`
+***********************************
+
+*********************************
+medios ferroviarios
+**********************************
+SELECT  `TipoLocomotora` as `tipomedio`,NULL as `umcap_id`,1 as `estado_medio_id`,4 as `rama`, NULL as `tipo_camion_id`,`NoLocomotora` as `nombre`,concat( `IdLBasiAM`,"-14") as `basificacion`, `AñoFab` as `year_fab`,0 as `cap`,0 as `aseguramiento`,`Marca` as `marca`,NULL as `modelo`, 0 as `ind_consumo`,`Potencia` as `potencia`,NULL as `num_rev_tecnica`,NULL as `venc_rev_tecnica`, NULL as `pais_abanderamiento`,1 as `id_tipo`,NULL as `servicio`,`ServiciosEspeciales` as `servicios_especiales`,0 as `cap_psentados`,0 as `cap_pdepie`,NULL as `tipoCombustible`, 1 as `tipoPropiedad`,concat( `IdLBasiAM`,"-14") as `basificacionObj` FROM `mediostransfc`
+
+*********************************
+finalmente seria
+*********************************
+SELECT  `TipoLocomotora` as `tipomedio`,NULL as `umcap_id`,1 as `estado_medio_id`,4 as `rama`, NULL as `tipo_camion_id`,`NoLocomotora` as `nombre`,concat( `IdLBasiAM`,"-14") as `basificacion`, `AñoFab` as `year_fab`,0 as `cap`,0 as `aseguramiento`,`Marca` as `marca`,NULL as `modelo`, 0 as `ind_consumo`,`Potencia` as `potencia`,NULL as `num_rev_tecnica`,NULL as `venc_rev_tecnica`, NULL as `pais_abanderamiento`,1 as `id_tipo`,NULL as `servicio`,`ServiciosEspeciales` as `servicios_especiales`,0 as `cap_psentados`,0 as `cap_pdepie`,NULL as `tipoCombustible`, 1 as `tipoPropiedad`,concat( `IdLBasiAM`,"-14") as `basificacionObj` FROM `mediostransfc`
+UNION
+SELECT  `IdTpoEm` as `tipomedio`, `UMct` as `umcap_id`,1 as `estado_medio_id`, 2 as`rama`, NULL as`tipo_camion_id`,`NomONúm` as `nombre`, concat(`IdLBasiAM`,"-14") as `basificacion`, `AñoFab` as `year_fab`,`Capacidad` as `cap`,0 as `aseguramiento`,NULL as `marca`,NULL as `modelo`, NULL as `ind_consumo`,`Potencia` as `potencia`,NULL as `num_rev_tecnica`,NULL as `venc_rev_tecnica`, `PaísDeAbanderamiento` as `pais_abanderamiento`,1 as `id_tipo`,NULL as `servicio`, `ServiciosEspeciales` as `servicios_especiales`,0 as `cap_psentados`,0 as `cap_pdepie`, NULL as `tipoCombustible`, `TipoDePropiedad` as `tipoPropiedad`,concat(`IdLBasiAM`,"-14") `basificacionObj` FROM `mediostransmar`
+UNION
+SELECT `IdTpoMedioAM` as `tipomedio`,`UMct` as `umcap_id`,1 as `estado_medio_id`,1 as `rama`,  `IdCamión` as `tipo_camion_id`, `ChapaNo` as `nombre`,concat(`IdLBasiAM`,"-14") as `basificacion`,`AñoDeFabricación` as `year_fab`,`CapaciTrans` as `cap`, `Aseguramiento` as `aseguramiento`,`Marca` as `marca`,`Modelo` as  `modelo`,`ICC` as `ind_consumo`,0 as `potencia`,`NumRevTec` as `num_rev_tecnica`,`VencimientoRT` as `venc_rev_tecnica`, "Cuba" as `pais_abanderamiento`,`IdTipo` as `id_tipo`,`IdServicio` as `servicio`,`ServiciosEspeciales` as `servicios_especiales`,0 as `cap_psentados`,0 as `cap_pdepie`,`Combustible` as `tipoCombustible`,1 as `tipoPropiedad`,concat(`IdLBasiAM`,"-14") as `basificacionObj` FROM `mediostransam`;
+*********************************
+****Vista para importar los comprobantes de Medios Automotores
+**********************************
+SELECT f.`Folio` as `folio` ,
+concat(f.`Folio`,"-10") as `id`,
+f.`Licencia` as `lot`,
+m.id as `medio_id`,
+f.`FechaEmitido` as `femitido`,
+f.`FechaEntrega` as `fentrega`,
+f.`EstadoModeloLot` as `estado_comp_id`,
+f.`FechaImpresión` as  `fimpreso`,
+f.`SinCosto` as `sincostp`,
+f.`Duplicado` as `duplicado` ,
+f.`Extensión` as `extension_id`,
+f.`Importe` as `importe`,
+vence_comp(f.FechaEmitido,f.Duplicado,m1.AñosVigencia,m1.MedidaDelTiempo)  as `fvencimiento`,
+1 as `firma`,
+1 as `firmacargo`
+FROM `foliocomprobantes` f inner join lojurid_db.`medios_trans` m on m.`nombre` = `Chapa` inner join mediostransam m1 on (f.`Chapa` = m1.ChapaNo)
+****************************************************************************************************************************
