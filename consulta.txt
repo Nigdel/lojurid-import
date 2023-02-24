@@ -1,0 +1,1 @@
+INSERT INTO `personasjuridicas`( `IdEntidad`, `CodReeup`, `NomEntidad`, `idorga`, `idmunicipio`, `Direccion`, `Actividad`, `Rama`, `SubRama`, `NoContribuyente`, `tipoEmpresa`) SELECT concat(`IdEntidad`,"-cod"), `CodReeup`, `NomEntidad`, `IdOrga` , `IdMunicipio` , `Dirección` , `Actividad`, `Rama`, `SubRama`, `NoContribuyente`, 1 FROM lojurid_01pinar.`personasjurídicas`

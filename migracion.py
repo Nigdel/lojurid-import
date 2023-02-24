@@ -1,7 +1,7 @@
 import conexion as cx
 import provincia as pv
 import mysql.connector
-dest = cx.lojurid.cursor()
+dest = cx.lojurid
 
 # orig = mysql.connector.connect()
 
@@ -45,7 +45,7 @@ provincias = {
 
 baseorig = pv.bdprov("localhost","root","","lojurid_db")
 
-
+cant = 0
 for prov in provincias:
     baseorig.db = provincias[prov].bdname
     tmp= mysql.connector.connect(
@@ -60,23 +60,31 @@ for prov in provincias:
     sqlLimpiaPJ = 'DELETE FROM `personasjurídicas` WHERE `NomEntidad` is NULL or (`IdEntidad` not in (SELECT `IdEntidad` from `lotjurídicas`))'
     sqlEstadLot = f"""SELECT sum(if(`NuLicencia` like("%-{provincias[prov].codigo}"),1,0)) as `locales`, sum(if(`NuLicencia` like("%-{provincias[prov].codigo}"),0,1)) as `foraneas`, count(*) as `total` FROM `lotjurídicas`"""
     sqllimpiaLot = f"""delete FROM `lotjurídicas` where `NuLicencia` not like("%-{provincias[prov].codigo}") """
+    sqlInsertapj = f"""INSERT INTO `personasjuridicas`( `IdEntidad`, `CodReeup`, `NomEntidad`, `idorga`, `idmunicipio`, `Direccion`, `Actividad`, `Rama`, `SubRama`, `NoContribuyente`, `tipoEmpresa`) 
+                    SELECT concat(`IdEntidad`,"-{provincias[prov].codigo}"), `CodReeup`, `NomEntidad`, `IdOrga` , `IdMunicipio` , `Dirección` , `Actividad`, `Rama`, `SubRama`, `NoContribuyente`, 1 
+                    FROM `{baseorig.db}`.`personasjurídicas` """
     #Establecemos un cursor para la conexión con el servidor MySQL
     cursor = tmp.cursor()
     #A partir del cursor, ejecutamos la consulta SQL de modificación
     # cursor.execute(sqlModificarRegistro)
-    cursor.execute(sqlLimpiaPJ)
+    # cursor.execute(sqlLimpiaPJ)
     # cursor.execute(sqllimpiaLot)
-    
-    tmp.commit()
+    # print(sqlInsertapj)
+    # tmp.commit()
     # cursor.execute(sqlEstadLot)
     # sqlSelect = f"""SELECT count(*)  FROM `lotjurídicas` where `NuLicencia` like("%-{provincias[prov].codigo}") and `IDEstado` = 5 """           
-    # sqlSelect = f"""SELECT count(*)  FROM `personasjurídicas` """           
+    sqlSelect = f"""SELECT count(*)  FROM `personasjurídicas` """           
     #A partir del cursor, ejecutamos la consulta SQL
-    # cursor.execute(sqlSelect)
+    cursor.execute(sqlSelect)
     #Guardamos el resultado de la consulta en una variable
-    # resultadoSQL = cursor.fetchall()
+    resultadoSQL = cursor.fetchall()
     # print("Provincia","locales","Foraneas","Totales")
-    # print(provincias[prov].nombre,resultadoSQL[0][0],resultadoSQL[0][1],resultadoSQL[0][2])
+    cant += int(resultadoSQL[0][0])
+    # print(provincias[prov].nombre,resultadoSQL[0][0])
     tmp.close()
+    # dest.cursor().execute(sqlInsertapj)
+    # dest.commit()
+    # dest.cursor().close()
 
-# print(provincias)
+
+print(cant)
